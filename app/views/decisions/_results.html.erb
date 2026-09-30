@@ -1,0 +1,34 @@
+<section class="results" aria-labelledby="results-heading" id="results">
+  <h2 id="results-heading">Result</h2>
+
+  <div class="cards">
+    <% DecisionsHelper::CARD_TITLES.each do |key, title| %>
+      <% decision = result[key] %>
+      <article class="card">
+        <p class="card-label"><%= title %></p>
+        <p class="card-value"><%= decision_badge(key, decision[:value]) %></p>
+        <p class="confidence-text"><%= confidence_percent(decision) %>% confidence</p>
+        <progress class="confidence-bar" value="<%= confidence_percent(decision) %>" max="100"
+                  aria-label="<%= title %> confidence <%= confidence_percent(decision) %> percent"><%= confidence_percent(decision) %>%</progress>
+        <% if low_confidence?(decision) %>
+          <p class="low-confidence"><span aria-hidden="true">⚠</span> Low confidence. Treat as a suggestion.</p>
+        <% end %>
+      </article>
+    <% end %>
+  </div>
+
+  <p class="summary">
+    <strong><%= overall_low_confidence?(result) ? "Tentative recommendation" : "Recommendation" %></strong>
+    <%= result[:summary] %>
+  </p>
+  <% if source == :sample %>
+    <p class="source-note"><small>Built-in sample: this result is precomputed, so no AI request was made.</small></p>
+  <% end %>
+
+  <details>
+    <summary>Normalized JSON</summary>
+    <pre><code><%= JSON.pretty_generate(result) %></code></pre>
+  </details>
+
+  <p><a href="#decision_text" class="edit-link">Edit the text and analyze again</a></p>
+</section>

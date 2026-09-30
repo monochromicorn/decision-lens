@@ -1,0 +1,100 @@
+/* Decision Lens — a restrained "decision instrument" look layered on Pico CSS. */
+:root,
+html:root[data-theme="light"] {
+  --pico-font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pico-border-radius: 0.5rem;
+  --pico-background-color: #f4f1ea;
+  --pico-color: #1b2430;
+  --pico-primary: #0b6b63;
+  --pico-primary-background: #0b6b63;
+  --pico-primary-hover-background: #095750;
+  --pico-primary-underline: rgba(11, 107, 99, 0.5);
+  --pico-primary-focus: rgba(11, 107, 99, 0.3);
+  --pico-primary-inverse: #fff;
+  --pico-form-element-focus-color: #0b6b63;
+
+  --ink: #1b2430;
+  --muted: #55606e;
+  --paper: #fffdf8;
+  --rule: #d9d3c4;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --low: #1f6b47;      --low-bg: #dff1e6;
+  --medium: #8a5a00;   --medium-bg: #fbeccb;
+  --high: #a4251b;     --high-bg: #fbdcd8;
+  --neutral: #2b3a55;  --neutral-bg: #e3e8f2;
+}
+
+body { background: var(--pico-background-color); }
+.container { max-width: 52rem; padding-inline: 1rem; }
+main.container { padding-block: 1.5rem 2rem; }
+
+.site-header { background: var(--ink); color: #f4f1ea; }
+.site-header-inner { display: flex; align-items: center; justify-content: space-between; padding-block: 0.75rem; }
+.brand { display: inline-flex; align-items: center; gap: 0.6rem; color: inherit; text-decoration: none; font-family: var(--mono); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.95rem; }
+.brand-mark { width: 1.6rem; height: 1.6rem; color: #6fd3c6; }
+.sign-out-form { margin: 0; }
+.sign-out { margin: 0; padding: 0.3rem 0.9rem; width: auto; color: #f4f1ea; --pico-border-color: #8793a5; --pico-color: #f4f1ea; }
+
+.eyebrow { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--pico-primary); margin-bottom: 0.25rem; }
+h1 { font-size: clamp(1.6rem, 4.5vw, 2.3rem); line-height: 1.15; margin-bottom: 0.75rem; }
+.lead { color: var(--muted); font-size: 1.05rem; }
+
+.panel { background: var(--paper); border: 1px solid var(--rule); border-radius: 0.75rem; padding: 1.25rem; box-shadow: 0 1px 0 rgba(27, 36, 48, 0.04); }
+.login { max-width: 30rem; margin-inline: auto; }
+
+.notice { padding: 0.75rem 1rem; border-radius: 0.5rem; border: 1px solid; margin-bottom: 1rem; }
+.notice-alert { background: var(--high-bg); border-color: var(--high); color: #6e150e; }
+.notice-info { background: var(--neutral-bg); border-color: var(--neutral); color: var(--neutral); }
+
+textarea { min-height: 9rem; resize: vertical; margin-bottom: 0.25rem; }
+.field-error { display: block; color: #8c1d14; font-weight: 600; margin-bottom: 0.25rem; }
+.form-meta { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; color: var(--muted); margin-bottom: 1rem; }
+.count { font-family: var(--mono); }
+.count.over { color: var(--high); font-weight: 700; }
+
+.samples { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+.samples-label { font-family: var(--mono); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.samples ul { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.samples li { padding: 0; margin: 0; list-style: none; }
+.sample { padding: 0.3rem 0.8rem; font-size: 0.9rem; margin: 0; }
+.analyze-form button[type="submit"] { width: 100%; margin-bottom: 0; }
+
+.empty-state { margin-top: 2rem; }
+.empty-state h2 { font-size: 1rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.empty-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0.75rem; padding: 0; list-style: none; }
+.empty-grid li { border: 1px dashed var(--rule); border-radius: 0.6rem; padding: 0.9rem; display: flex; flex-direction: column; gap: 0.25rem; margin: 0; }
+.empty-grid span { color: var(--muted); font-size: 0.9rem; }
+
+.results { margin-top: 2rem; animation: rise 0.35s ease-out both; }
+.results h2 { font-family: var(--mono); font-size: 1rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.card { background: var(--paper); border: 1px solid var(--rule); border-top: 4px solid var(--ink); border-radius: 0.6rem; padding: 1rem; margin: 0; }
+.card-label { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+.card-value { margin-bottom: 0.5rem; }
+.confidence-text { font-family: var(--mono); font-size: 0.85rem; margin-bottom: 0.25rem; }
+.low-confidence { color: var(--medium); font-size: 0.85rem; font-weight: 600; margin: 0.5rem 0 0; }
+
+/* Confidence gauge: <progress> is semantic, keyboard/screen-reader friendly, and CSP-safe. */
+.confidence-bar { height: 0.6rem; margin: 0; width: 100%; border-radius: 0.3rem; overflow: hidden; }
+.confidence-bar::-webkit-progress-bar { background: #e6e0d0; }
+.confidence-bar::-webkit-progress-value { background: var(--ink); }
+.confidence-bar::-moz-progress-bar { background: var(--ink); }
+
+.badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-weight: 700; font-size: 1.1rem; border: 1.5px solid currentColor; background: var(--neutral-bg); color: var(--neutral); }
+.badge-urgency-low { background: var(--low-bg); color: var(--low); }
+.badge-urgency-medium { background: var(--medium-bg); color: var(--medium); }
+.badge-urgency-high { background: var(--high-bg); color: var(--high); }
+
+.summary { background: var(--paper); border-left: 4px solid var(--pico-primary); padding: 0.9rem 1.1rem; border-radius: 0 0.5rem 0.5rem 0; }
+.summary strong { display: block; font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--pico-primary); }
+.source-note { color: var(--muted); }
+details pre { background: var(--ink); color: #e8e4d8; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+details pre code { background: transparent; color: inherit; }
+
+.site-footer { padding-bottom: 2rem; color: var(--muted); text-align: center; }
+
+:focus-visible { outline: 3px solid #0b6b63; outline-offset: 2px; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .results { animation: none; } }

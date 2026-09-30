@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+  <head>
+    <title><%= content_for(:title) || "Decision Lens" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="robots" content="noindex">
+    <meta name="color-scheme" content="light">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <%= stylesheet_link_tag "pico.min", "application" %>
+    <%= javascript_include_tag "decision_lens", defer: true %>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="container site-header-inner">
+        <a class="brand" href="<%= root_path %>">
+          <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+            <circle cx="14" cy="14" r="9" fill="none" stroke="currentColor" stroke-width="3"/>
+            <path d="M21 21l7 7" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="14" cy="14" r="2.5" fill="currentColor"/>
+          </svg>
+          <span>Decision Lens</span>
+        </a>
+        <% if logged_in? %>
+          <%= button_to "Sign out", logout_path, method: :delete, class: "outline secondary sign-out", form: { class: "sign-out-form" } %>
+        <% end %>
+      </div>
+    </header>
+
+    <main class="container">
+      <% if flash[:alert] %>
+        <p class="notice notice-alert" role="alert"><%= flash[:alert] %></p>
+      <% end %>
+      <% if flash[:notice] %>
+        <p class="notice notice-info" role="status"><%= flash[:notice] %></p>
+      <% end %>
+      <%= yield %>
+    </main>
+
+    <footer class="container site-footer">
+      <small>A portfolio demo built with Ruby on Rails. Nothing you submit is stored.</small>
+    </footer>
+  </body>
+</html>

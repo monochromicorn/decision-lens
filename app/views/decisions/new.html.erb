@@ -1,0 +1,48 @@
+<% content_for :title, "Decision Lens" %>
+<section class="intro">
+  <p class="eyebrow">Decision instrument</p>
+  <h1>Paste a message. Get three decisions.</h1>
+  <p class="lead">Decision Lens classifies what a message is, how urgent it is, and whether to automate, review, or escalate it.</p>
+</section>
+
+<%= form_with url: analyze_path, scope: :decision, class: "panel analyze-form", data: { analyze_form: true } do |form| %>
+  <% invalid = @input.errors[:text].any? %>
+  <label for="decision_text">Message to analyze</label>
+  <textarea id="decision_text" name="decision[text]" rows="6" required
+            aria-describedby="text-help text-count<%= ' text-error' if invalid %>"
+            <%= 'aria-invalid="true"'.html_safe if invalid %>
+            data-min="<%= AppSettings::MIN_INPUT_LENGTH %>" data-max="<%= AppSettings::MAX_INPUT_LENGTH %>"><%= @input.text %></textarea>
+
+  <% if invalid %>
+    <small id="text-error" class="field-error" role="alert"><%= @input.errors.full_messages_for(:text).first %></small>
+  <% end %>
+
+  <div class="form-meta">
+    <small id="text-help">Text is sent to an external AI provider. Don't include sensitive information.</small>
+    <small id="text-count" class="count" aria-live="polite"><span data-count><%= @input.text.length %></span> / <%= AppSettings::MAX_INPUT_LENGTH %></small>
+  </div>
+
+  <div class="samples">
+    <span class="samples-label" id="samples-label">Try a sample:</span>
+    <ul role="list" aria-labelledby="samples-label">
+      <% SampleInputs::ALL.each_with_index do |sample, index| %>
+        <li><a href="<%= root_path(sample: index) %>" role="button" class="outline secondary sample" data-sample-text="<%= sample.text %>"><%= sample.label %></a></li>
+      <% end %>
+    </ul>
+  </div>
+
+  <button type="submit" data-submit>Analyze decision</button>
+<% end %>
+
+<% if @result %>
+  <%= render "results", result: @result, source: @source %>
+<% else %>
+  <section class="empty-state" aria-label="Example of results">
+    <h2>What you'll see</h2>
+    <ul class="empty-grid" role="list">
+      <li><strong>Category</strong><span>What kind of message this is</span></li>
+      <li><strong>Urgency</strong><span>Low, medium, or high</span></li>
+      <li><strong>Recommended action</strong><span>Automate, review, or escalate</span></li>
+    </ul>
+  </section>
+<% end %>
