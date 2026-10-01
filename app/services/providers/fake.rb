@@ -11,8 +11,8 @@ module Providers
       "support"  => %w[error broken bug crash cannot can't outage down help issue],
       "feedback" => %w[thanks thank love great fantastic suggest feedback]
     }.freeze
-    HIGH_URGENCY   = ["urgent", "asap", "immediately", "right now", "outage", "breach", "critical", "unauthorized", "cannot", "can't"].freeze
-    MEDIUM_URGENCY = ["soon", "problem", "issue", "refund", "twice", "this week", "error"].freeze
+    HIGH_URGENCY   = [ "urgent", "asap", "immediately", "right now", "outage", "breach", "critical", "unauthorized", "cannot", "can't" ].freeze
+    MEDIUM_URGENCY = [ "soon", "problem", "issue", "refund", "twice", "this week", "error" ].freeze
 
     def complete(text, timeout: nil)
       words = text.downcase
@@ -21,10 +21,14 @@ module Providers
       action = action_for(category, urgency)
 
       JSON.generate(
-        category: { value: category, confidence: category == "other" ? 0.5 : [ 0.55 + 0.12 * hits, 0.95 ].min.round(2) },
-        urgency: { value: urgency, confidence: urgency == "low" ? 0.7 : [ 0.6 + 0.1 * urgency_hits, 0.95 ].min.round(2) },
-        action: { value: action, confidence: action == "review" ? 0.62 : 0.85 },
-        summary: summary_for(category, urgency, action)
+        category: decision(DecisionAnalyzer::CATEGORIES, category,
+                           category == "other" ? 0.5 : [ 0.55 + 0.12 * hits, 0.95 ].min),
+        urgency: decision(DecisionAnalyzer::URGENCIES, urgency,
+                          urgency == "low" ? 0.7 : [ 0.6 + 0.1 * urgency_hits, 0.95 ].min),
+        action: decision(DecisionAnalyzer::ACTIONS, action, action == "review" ? 0.62 : 0.85),
+        provider: "fake",
+        model: "fake-keywords-1",
+        usage: { input_tokens: (text.length / 4.0).ceil }
       )
     end
 
@@ -51,13 +55,12 @@ module Providers
       "review"
     end
 
-    def summary_for(category, urgency, action)
-      tail = {
-        "escalate" => "It needs prompt human attention.",
-        "review" => "A person should look at it before anything is sent.",
-        "automate" => "A standard automated reply is appropriate."
-      }.fetch(action)
-      "This looks like a #{urgency}-urgency #{category} message. #{tail}"
+    # The chosen value gets `confidence`; the remainder is shared evenly.
+    def decision(vocabulary, value, confidence)
+      confidence = confidence.round(2)
+      rest = ((1 - confidence) / (vocabulary.size - 1)).round(4)
+      probabilities = vocabulary.to_h { |name| [ name, name == value ? confidence : rest ] }
+      { value: value, confidence: confidence, probabilities: probabilities }
     end
 
     def count(words, list)

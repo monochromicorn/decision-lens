@@ -9,6 +9,16 @@ RSpec.describe SampleInputs do
         expect(DecisionAnalyzer.new(provider: provider).call(sample.text)).to eq(sample.result)
       end
 
+      it "has a deterministic summary that matches its cards" do
+        result = sample.result
+
+        expect(result[:summary]).to eq(
+          DecisionSummary.call(category: result[:category][:value], urgency: result[:urgency][:value],
+                               action: result[:action][:value])
+        )
+        expect(result[:provider]).to eq("precomputed")
+      end
+
       it "has text long enough to be valid input" do
         expect(DecisionInput.new(sample.text)).to be_valid
       end

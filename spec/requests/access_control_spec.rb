@@ -27,6 +27,19 @@ RSpec.describe "Access control", type: :request do
       expect(Providers::Fake).not_to have_received(:new)
     end
 
+    it "can never reach the TypeSafe transport" do
+      with_env("AI_PROVIDER" => "typesafe", "TYPESAFE_API_KEY" => "k", "TYPESAFE_MODEL" => "m") do
+        transport = instance_double(Providers::Typesafe::NetHttpTransport)
+        allow(Providers::Typesafe::NetHttpTransport).to receive(:new).and_return(transport)
+        allow(transport).to receive(:request)
+
+        post analyze_path, params: { decision: { text: valid_text } }
+
+        expect(transport).not_to have_received(:request)
+        expect(Providers::Typesafe::NetHttpTransport).not_to have_received(:new)
+      end
+    end
+
     it "do not consume live-analysis quota" do
       5.times { post analyze_path, params: { decision: { text: valid_text } } }
       sign_in

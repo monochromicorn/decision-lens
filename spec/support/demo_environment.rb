@@ -29,6 +29,8 @@ RSpec.configure do |config|
   config.around do |example|
     original = ENV.to_h
     DemoEnvironment::DEFAULTS.each { |key, value| ENV[key] = value }
+    # A developer's real .env must never leak into specs.
+    %w[TYPESAFE_API_KEY TYPESAFE_MODEL TYPESAFE_BASE_URL AI_TIMEOUT_SECONDS].each { |key| ENV.delete(key) }
     RateLimiter.reset!
     example.run
   ensure

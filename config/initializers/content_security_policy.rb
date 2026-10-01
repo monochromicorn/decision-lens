@@ -4,7 +4,7 @@ Rails.application.configure do
     policy.default_src :self
     policy.script_src  :self
     policy.style_src   :self
-    policy.img_src    :self, :data
+    policy.img_src     :self, :data
     policy.font_src    :self
     policy.connect_src :self
     policy.object_src  :none

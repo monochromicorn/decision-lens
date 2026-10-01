@@ -18,4 +18,10 @@ group :development, :test do
   gem "dotenv-rails"
 
   gem "rspec-rails"
+
+  # Static analysis for security
+  gem "brakeman", require: false
+
+  # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
+  gem "rubocop-rails-omakase", require: false
 end

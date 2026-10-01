@@ -37,9 +37,20 @@ RSpec.describe Providers::Fake do
     expect(result[:category][:confidence]).to be < DecisionAnalyzer::LOW_CONFIDENCE
   end
 
-  it "returns JSON that the analyzer accepts without modification of vocabulary" do
+  it "returns provider-contract JSON with probabilities, no prose, and estimated usage" do
     raw = described_class.new.complete("Production is down, urgent", timeout: 1.0)
+    data = JSON.parse(raw)
 
-    expect(JSON.parse(raw).keys).to match_array(%w[category urgency action summary])
+    expect(data.keys).to match_array(%w[category urgency action provider model usage])
+    expect(data["urgency"]["probabilities"].keys).to eq(DecisionAnalyzer::URGENCIES)
+    expect(data["usage"]["input_tokens"]).to be_positive
+  end
+
+  it "produces probabilities that sum to one for every decision" do
+    result = analyze("The invoice looks wrong, I need a refund soon")
+
+    %i[category urgency action].each do |key|
+      expect(result[key][:probabilities].values.sum).to be_within(0.01).of(1.0)
+    end
   end
 end

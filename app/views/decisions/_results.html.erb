@@ -21,6 +21,9 @@
     <strong><%= overall_low_confidence?(result) ? "Tentative recommendation" : "Recommendation" %></strong>
     <%= result[:summary] %>
   </p>
+  <% if source == :live && result[:provider] == "typesafe" %>
+    <p class="source-note"><small>Analyzed by TypeSafe Jev<%= " (#{result[:model]})" if result[:model] %> in one request.</small></p>
+  <% end %>
   <% if source == :sample %>
     <p class="source-note"><small>Built-in sample: this result is precomputed, so no AI request was made.</small></p>
   <% end %>

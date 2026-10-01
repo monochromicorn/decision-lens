@@ -18,7 +18,7 @@
   <% end %>
 
   <div class="form-meta">
-    <small id="text-help">Text is sent to an external AI provider. Don't include sensitive information.</small>
+    <small id="text-help"><%= privacy_note %></small>
     <small id="text-count" class="count" aria-live="polite"><span data-count><%= @input.text.length %></span> / <%= AppSettings::MAX_INPUT_LENGTH %></small>
   </div>
 

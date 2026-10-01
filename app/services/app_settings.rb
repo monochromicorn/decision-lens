@@ -19,6 +19,23 @@ module AppSettings
   end
 
   def ai_timeout = ENV.fetch("AI_TIMEOUT_SECONDS", 10).to_f
+
+  # TypeSafe (Jev). The key is only ever read here and passed to the adapter.
+  def typesafe_api_key = ENV["TYPESAFE_API_KEY"].to_s
+  def typesafe_model = ENV["TYPESAFE_MODEL"].to_s
+  def typesafe_base_url = ENV.fetch("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
+
+  # Fail fast at boot in production so a missing secret is caught at deploy time,
+  # not by the first visitor. Messages name variables, never values.
+  def validate_ai_configuration!
+    return unless ai_provider == "typesafe"
+
+    missing = { "TYPESAFE_API_KEY" => typesafe_api_key, "TYPESAFE_MODEL" => typesafe_model }
+              .select { |_name, value| value.blank? }.keys
+    return if missing.empty?
+
+    raise DecisionAnalyzer::ConfigurationError, "AI_PROVIDER=typesafe requires #{missing.join(', ')}"
+  end
   def analyses_per_hour = ENV.fetch("ANALYSES_PER_HOUR", 8).to_i
   def failed_logins_per_15_minutes = ENV.fetch("FAILED_LOGINS_PER_15_MINUTES", 10).to_i
 end

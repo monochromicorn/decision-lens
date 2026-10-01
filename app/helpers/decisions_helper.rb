@@ -13,6 +13,15 @@ module DecisionsHelper
     end
   end
 
+  # Tells visitors where their text goes. Keep in sync with the configured provider.
+  def privacy_note
+    case AppSettings.ai_provider
+    when "typesafe" then "Text is sent to TypeSafe AI for analysis. Don't include sensitive information."
+    when "fake" then "Demo mode: a built-in offline model analyzes your text and nothing leaves this server."
+    else "Text is sent to an external AI provider. Don't include sensitive information."
+    end
+  end
+
   def confidence_percent(decision)
     (decision[:confidence] * 100).round
   end
