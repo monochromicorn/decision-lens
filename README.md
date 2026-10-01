@@ -34,7 +34,7 @@ bin/rails server
 Open <http://localhost:3000> and sign in with the credentials from `.env`. The default `AI_PROVIDER=fake` needs no API key or network access.
 
 ```bash
-bin/rails test           # full suite, no network
+bundle exec rspec       # full suite, no network
 ```
 
 ## Configuration
@@ -111,11 +111,17 @@ Controllers and views never change. The controller maps analyzer errors to frien
 
 ## Testing
 
-`bin/rails test` runs 39 tests (Minitest, no network, no real AI calls). They cover:
+`bundle exec rspec` runs the suite (RSpec, random order, no network, no real AI calls). To reproduce an order-dependent failure, pass the reported seed: `bundle exec rspec --seed 1234`. Specs live under `spec/`:
+
+- `spec/models`, `spec/services`: input validation, response normalization, the fake provider, sample inputs, and the rate limiter.
+- `spec/requests`: sign-in, sign-out, access control, the analysis flow, error rendering, rate limiting, and logging.
+- `spec/support`: a per-example isolated environment (fixed demo credentials, fake provider, small rate limits) and small helpers. Provider doubles are verifying doubles, so they can only respond to what a provider really responds to.
+
+They cover:
 
 - input length boundaries and error messages;
-- sign-in, wrong credentials, fail-closed when unconfigured, sign-out, redirects for every protected route, login throttling, cookie flags;
-- unauthenticated requests cannot invoke the analyzer;
+- sign-in, wrong credentials, fail-closed when unconfigured, sign-out, session reset, redirects for every protected route, login throttling, cookie flags;
+- unauthenticated requests cannot invoke the analyzer or construct a provider;
 - response normalization, malformed/incomplete provider output, and each provider error class;
 - friendly, non-leaking error messages; per-IP analysis throttling; samples bypass the provider and quota;
 - CSRF enforcement, no-store caching, and log contents.

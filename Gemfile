@@ -16,4 +16,6 @@ group :development, :test do
 
   # Loads .env into ENV for local development and tests
   gem "dotenv-rails"
+
+  gem "rspec-rails"
 end

@@ -12,7 +12,6 @@ require "action_controller/railtie"
 # require "action_text/engine"
 require "action_view/railtie"
 # require "action_cable/engine"
-require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -44,7 +43,16 @@ module DecisionLens
       secure: Rails.env.production?,
       expire_after: 12 * 60 * 60
 
-    # Don't generate system test files.
-    config.generators.system_tests = nil
+    # RSpec only: no fixtures (no database), and no view/helper/routing/controller
+    # specs. Request and system specs stay available.
+    config.generators do |g|
+      g.test_framework :rspec,
+        fixtures: false,
+        view_specs: false,
+        helper_specs: false,
+        routing_specs: false,
+        controller_specs: false,
+        request_specs: true
+    end
   end
 end
