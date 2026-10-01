@@ -1,4 +1,5 @@
 require "active_support/core_ext/integer/time"
+require_relative "../../lib/allowed_hosts"
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -21,14 +22,14 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  config.assume_ssl = true
-
-  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
+  # TLS ends at the hosting proxy, which talks plain HTTP to the app. Rails therefore
+  # decides "is this HTTPS?" from the forwarded protocol header (X-Forwarded-Proto) and
+  # redirects everything else. Do NOT enable assume_ssl: it would treat plain-HTTP
+  # requests as secure and skip the redirect.
   config.force_ssl = true
 
-  # Skip http-to-https redirect for the health check so the platform probe succeeds.
-  config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
+  # The health check must work over plain HTTP from the platform, so it is not redirected.
+  config.ssl_options = { redirect: { exclude: AllowedHosts.health_check_exclusion } }
 
   # Log to STDOUT with the current request id as a default log tag.
   config.log_tags = [ :request_id ]
@@ -50,10 +51,8 @@ Rails.application.configure do
   # the I18n.default_locale when a translation cannot be found).
   config.i18n.fallbacks = true
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # Set APP_HOSTS (comma-separated) to restrict accepted Host headers.
-  if ENV["APP_HOSTS"].present?
-    config.hosts = ENV["APP_HOSTS"].split(",").map(&:strip)
-  end
-  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Host authorization: only the exact hostnames listed in APP_HOSTS are served (see
+  # lib/allowed_hosts.rb). With nothing valid configured, everything but /up is refused.
+  config.hosts = AllowedHosts.for_rails(ENV["APP_HOSTS"])
+  config.host_authorization = { exclude: AllowedHosts.health_check_exclusion }
 end

@@ -52,8 +52,9 @@ All configuration is environment variables (`.env` locally via `dotenv-rails`, h
 | `AI_TIMEOUT_SECONDS` | no | `10` | Per-phase (connect, write, read) timeout for the Jev request. |
 | `ANALYSES_PER_HOUR` | no | `8` | Live analyses per client IP per hour. |
 | `FAILED_LOGINS_PER_15_MINUTES` | no | `10` | Failed sign-ins per client IP per 15 minutes. |
-| `APP_HOSTS` | no | unset | Comma-separated allowed `Host` headers in production (`/up` is always exempt). |
-| `RAILS_MAX_THREADS` | no | `2` | Puma threads (one worker, no clustering). |
+| `APP_HOSTS` | production | unset | Comma-separated **exact** hostnames served in production (no wildcards). Unset or invalid refuses everything except `/up`. See [docs/koyeb-deployment.md](docs/koyeb-deployment.md). |
+| `RAILS_MAX_THREADS` | no | `2` | Puma threads (single process, 0 forked workers). |
+| `PORT` | production | `3000` | Port Puma listens on (all IPv4 interfaces). |
 
 ## Architecture
 
@@ -166,7 +167,7 @@ TypeSafe's official website ([typesafe.ai](https://typesafe.ai), "Jev.Cost" sect
 - **CSRF** protection on all forms. **CSP** is strict (`'self'` only, no inline scripts or styles, no third-party hosts; Pico CSS is vendored). Responses from the app pages are `Cache-Control: no-store`; pages are `noindex`.
 - **Logging.** `text`, `message`, `input`, `username`, `password`, `api_key`, and `authorization` are filtered parameters; provider error bodies, request bodies, headers, and the API key are never logged (only the exception class and a short status line). A test asserts visitor text and passwords are absent from logs.
 - **No persistence.** Inputs and results exist only for the duration of the request. The note beside the form tells visitors their text is sent to TypeSafe AI (when `AI_PROVIDER=typesafe`) and should not be sensitive; in fake mode it says nothing leaves the server.
-- **Production** forces HTTPS (HSTS, secure cookies) and assumes TLS terminates at the platform proxy; `/up` is exempt from the redirect and host check so health probes succeed.
+- **Production** forces HTTPS: plain-HTTP requests are redirected using the proxy's forwarded protocol header (`assume_ssl` is deliberately off), HSTS is sent, and the session cookie is `Secure`, `HttpOnly`, `SameSite=Lax`. Only hostnames listed in `APP_HOSTS` are served (fail closed). `/up` is exempt from the redirect and host check so health probes succeed. Unhandled errors render the static error page with no details.
 
 ## Testing
 
@@ -194,14 +195,13 @@ One Puma worker, two threads, no background processes, no database, no Node. Mea
 
 ## Deployment notes (not yet done)
 
-See `docs/decision-lens-hosting-domain-plan.md`. Points that matter at deploy time:
+The complete Koyeb configuration (secrets, required and optional variables, start command, health check, hostname sequence, and a first-deploy checklist) is in [docs/koyeb-deployment.md](docs/koyeb-deployment.md). Summary:
 
-- Set these as secrets: `SECRET_KEY_BASE`, `DEMO_USERNAME`, `DEMO_PASSWORD`, `AI_PROVIDER=typesafe`, `TYPESAFE_API_KEY`, `TYPESAFE_MODEL` (pinned version), and optionally `APP_HOSTS`, `TYPESAFE_BASE_URL`, `AI_TIMEOUT_SECONDS`. `RAILS_MASTER_KEY` is not needed.
-- Run `bin/rails assets:precompile` at build time (with `SECRET_KEY_BASE_DUMMY=1`; the production AI-config check is skipped for that run) and start with `bin/rails server -b 0.0.0.0` (honors `PORT`). No Dockerfile is committed yet.
-- Health check: HTTP `GET /up`.
-- **Client IP:** the rate limiters key on `request.remote_ip`. Behind Koyeb's proxy, confirm the real client IP is what Rails sees (check `X-Forwarded-For` handling and, if needed, configure trusted proxies); otherwise all visitors could share one bucket.
-- Rate-limit state is per process and lost on restart or redeploy, which is acceptable for a single instance.
-- Set a provider-side spending limit or billing alert in TypeSafe.
+- Secrets: `SECRET_KEY_BASE`, `DEMO_USERNAME`, `DEMO_PASSWORD`, `TYPESAFE_API_KEY`. Plain variables: `RAILS_ENV=production`, `AI_PROVIDER=typesafe`, `TYPESAFE_MODEL=jev-latest`, `PORT`, and `APP_HOSTS` (added after Koyeb assigns its hostname).
+- Run `SECRET_KEY_BASE_DUMMY=1 bin/rails assets:precompile` at build time and start with `bin/rails server -b 0.0.0.0`. Health check: `GET /up`. No database, Redis, worker, persistent disk, or release command is needed. No Dockerfile or Procfile is committed yet.
+- Production was smoke-tested locally with the fake provider: asset build, boot, `/up`, HTTPS redirect, host authorization, login, cookie flags, graceful shutdown, and no outbound connections.
+- Open item for the first deploy: Koyeb's docs do not mention `X-Forwarded-Proto`, which the HTTPS redirect relies on. See the checklist.
+- Rate-limit state is per process and lost on restart, which is acceptable for a single instance. Set a provider-side spending limit or billing alert in TypeSafe.
 
 ## Roadmap and open decisions
 

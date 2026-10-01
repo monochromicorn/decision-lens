@@ -28,8 +28,12 @@
 threads_count = ENV.fetch("RAILS_MAX_THREADS", 2)
 threads threads_count, threads_count
 
-# Specifies the `port` that Puma will listen on to receive requests; default is 3000.
-port ENV.fetch("PORT", 3000)
+# Single-process mode (no forked workers), sized for a 512 MB instance. Set explicitly so a
+# platform-provided WEB_CONCURRENCY cannot multiply memory use.
+workers 0
+
+# Listen on all IPv4 interfaces on the platform-provided PORT (Koyeb sets it; default 3000).
+bind "tcp://0.0.0.0:#{ENV.fetch("PORT", 3000)}"
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
