@@ -1,6 +1,6 @@
 # Parses the APP_HOSTS environment variable into Rails' host-authorization list.
 #
-# Format: comma-separated exact hostnames, e.g. "my-app-org.koyeb.app,lens.example.com".
+# Format: comma-separated exact hostnames, e.g. "lens.example.com,www.example.com".
 # Case is ignored and whitespace around entries is trimmed. Anything that is not a
 # plain hostname (wildcards, leading dots, schemes, ports, paths, IP addresses,
 # underscores, empty entries) is rejected rather than interpreted.

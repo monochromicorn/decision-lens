@@ -1,0 +1,59 @@
+# Kamal 2 deployment for Decision Lens: one web server, no database or accessories.
+# Guide: docs/kamal-digitalocean-deployment.md
+#
+# Values that are NOT known yet are written as REPLACE_ME_*. They are deliberately invalid
+# (underscores are not allowed in hostnames), so an unedited file can never serve traffic.
+# Replace them in the live-deployment phase.
+service: decision-lens
+
+# Private image on GitHub Container Registry: ghcr.io/<github-user>/decision-lens
+image: monochromicorn/decision-lens
+
+servers:
+  web:
+    - REPLACE_ME_DROPLET_IP
+
+proxy:
+  # kamal-proxy terminates TLS with an automatic Let's Encrypt certificate. This needs
+  # the hostname's DNS to point at the server and ports 80 and 443 to be open.
+  ssl: true
+  host: REPLACE_ME_HOSTNAME
+  app_port: 3000
+  # Rails relies on X-Forwarded-Proto (HTTPS detection) and X-Forwarded-For (client IP for
+  # rate limits) from this trusted proxy. See the deployment guide's smoke tests.
+  forward_headers: true
+  healthcheck:
+    path: /up
+    interval: 3
+    timeout: 3
+
+registry:
+  server: ghcr.io
+  username: monochromicorn
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+builder:
+  arch: amd64
+
+env:
+  clear:
+    AI_PROVIDER: typesafe
+    TYPESAFE_MODEL: jev-latest
+    TYPESAFE_BASE_URL: https://api.typesafe.ai
+    AI_TIMEOUT_SECONDS: 10
+    ANALYSES_PER_HOUR: 8
+    FAILED_LOGINS_PER_15_MINUTES: 10
+    RAILS_MAX_THREADS: 2
+    PORT: 3000
+    RAILS_LOG_LEVEL: info
+    # Exact hostname(s), comma-separated; must match proxy.host above.
+    APP_HOSTS: REPLACE_ME_HOSTNAME
+  secret:
+    - SECRET_KEY_BASE
+    - DEMO_USERNAME
+    - DEMO_PASSWORD
+    - TYPESAFE_API_KEY
+
+# Keep few old containers and images on the small (25 GB) disk.
+retain_containers: 3

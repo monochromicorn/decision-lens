@@ -7,6 +7,9 @@ gem "propshaft"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 
+# Reduces boot times through caching; required in config/boot.rb
+gem "bootsnap", require: false
+
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
@@ -18,6 +21,10 @@ group :development, :test do
   gem "dotenv-rails"
 
   gem "rspec-rails"
+
+  # Deploys the app as a container to a single server. Development-only on purpose:
+  # it runs on the developer's machine, so it stays out of the production image.
+  gem "kamal", require: false
 
   # Static analysis for security
   gem "brakeman", require: false

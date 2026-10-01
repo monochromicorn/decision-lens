@@ -1,0 +1,36 @@
+# Keep secrets, history, and local artifacts out of the Docker build context.
+
+# Git
+.git
+.gitignore
+.github
+
+# Environment files and keys (never part of an image)
+.env
+.env.*
+config/*.key
+config/credentials/*.key
+*.pem
+*.key
+
+# Kamal configuration and secrets (including .kamal/secrets and destination files)
+.kamal
+
+# Logs, temp files, and build output (the image builds its own)
+log/*
+tmp/*
+!log/.keep
+!tmp/.keep
+*.log
+*.pid
+public/assets
+coverage
+node_modules
+.DS_Store
+
+# Not needed at runtime
+spec
+.rspec
+.rubocop.yml
+docs
+README.md

@@ -164,7 +164,7 @@ GET    /up        Rails health check (no authentication)
 ### 7.3 Performance and runtime constraints
 
 - Run one Puma worker with a small thread pool.
-- Target operation within a 512 MB memory limit.
+- Keep the application lean enough to run comfortably on a 1 GB Droplet shared with Docker and kamal-proxy (the app itself stays well under 512 MB).
 - Avoid background processes and persistent local state.
 - Keep the initial HTML useful before any external script finishes loading.
 - Target a fast server response excluding unavoidable AI-provider latency.
@@ -172,7 +172,7 @@ GET    /up        Rails health check (no authentication)
 ## 8. Security, privacy, and cost controls
 
 - Keep the AI API credential server-side.
-- Keep the shared demo username and password server-side in Koyeb Secrets.
+- Keep the shared demo username and password server-side, supplied as Kamal secrets (never committed).
 - Require HTTPS and use secure, HTTP-only, same-site session cookies in production.
 - Use Rails’ CSRF protection for the submission form.
 - Never log request bodies containing visitor input.
@@ -186,38 +186,37 @@ GET    /up        Rails health check (no authentication)
 
 ## 9. Hosting and operations
 
-- Deploy the Rails web service to a **Koyeb Eco Micro** instance.
-- Configure fixed scaling at one instance, or minimum one and maximum one.
-- Expected compute allocation: 0.25 vCPU, 512 MB RAM, and 4 GB SSD.
-- Current estimated maximum compute cost: approximately **$2.68 per full month**, billed by usage. Pricing must be rechecked before deployment.
+- Deploy the Rails web service with **Kamal 2** to one **DigitalOcean Droplet** (Ubuntu LTS, 1 GB RAM, 1 vCPU, 25 GB SSD).
+- Run exactly one application container behind kamal-proxy; no scale-out and no accessories.
+- Current estimated compute cost: approximately **$6 per month**. Pricing must be rechecked before deployment.
 - Use a custom subdomain such as `lens.example.com` for the public application.
 - Register one broadly reusable personal-brand `.com` domain rather than a domain limited to this single demo.
 - Use free DNS hosting and WHOIS privacy through the selected registrar; Cloudflare Registrar is the preferred long-term option.
-- Retain the generated Koyeb hostname for deployment diagnostics, but use the custom hostname in the portfolio and README.
-- Connect the subdomain to Koyeb with the CNAME record supplied by Koyeb.
-- Use Koyeb's automatically provisioned TLS certificate for HTTPS.
-- Configure an HTTP health check against `/up`.
-- Store the Rails master key, AI API key, demo username, and demo password as Koyeb secrets.
-- Deploy automatically from the public source repository after the main branch passes tests.
+- Point the subdomain at the Droplet with an `A` record (DNS only if the provider can proxy traffic).
+- Use kamal-proxy's automatic Let's Encrypt certificate for HTTPS.
+- Configure an HTTP health check against `/up` in kamal-proxy.
+- Store the AI API key, demo username, demo password, session secret, and registry token as Kamal secrets taken from the deployer's local environment; never commit them.
+- Build the Docker image locally for amd64 and keep it in a private GitHub Container Registry package.
+- Deploy with `bin/kamal deploy` from the developer's machine after the main branch passes tests. Automatic deployment from CI is a possible later addition.
 - Provide a clear README with local setup, architecture notes, screenshots, deployment notes, and an explicit explanation of the AI decision schema.
 
 Current hosting references:
 
-- [Koyeb instance types and pricing](https://www.koyeb.com/docs/reference/instances)
-- [Koyeb scaling options](https://www.koyeb.com/docs/reference/scaling)
-- [Koyeb custom domains](https://www.koyeb.com/docs/run-and-scale/domains)
+- [Kamal](https://kamal-deploy.org/)
+- [DigitalOcean Droplet pricing](https://www.digitalocean.com/pricing/droplets)
+- [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 - [Cloudflare Registrar](https://www.cloudflare.com/domains/)
 
 ## 10. Cost targets
 
 | Item | MVP target |
 |---|---:|
-| Koyeb hosting | Approximately $2.68/month maximum |
+| DigitalOcean Droplet (1 GB) | Approximately $6/month |
 | Database | $0; none used |
 | Domain registration | Approximately $10–12/year for one `.com` |
-| DNS, WHOIS privacy, and TLS | $0 |
+| DNS, WHOIS privacy, TLS, and container registry | $0 |
 | AI API | Target $0–$3/month with strict limits |
-| Total | Target under $7/month on average |
+| Total | Target under $10/month on average |
 
 ## 11. Testing requirements
 

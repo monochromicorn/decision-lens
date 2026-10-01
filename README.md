@@ -8,7 +8,7 @@ Decision Lens turns a short piece of text into three structured judgments instea
 | **Urgency** | How soon does it need attention? | `low`, `medium`, `high` |
 | **Recommended action** | What should happen next? | `automate`, `review`, `escalate` |
 
-Each decision carries a confidence score (shown as a badge plus a gauge), and a one-to-two sentence summary explains the overall recommendation. It is a portfolio demo: a small, server-rendered Ruby on Rails 8.1 app with no database, no JavaScript framework, and no stored visitor data, designed to run inside a 512 MB hosting instance.
+Each decision carries a confidence score (shown as a badge plus a gauge), and a one-to-two sentence summary explains the overall recommendation. It is a portfolio demo: a small, server-rendered Ruby on Rails 8.1 app with no database, no JavaScript framework, and no stored visitor data, designed to run on one small (1 GB) server.
 
 > **Status: Jev integration implemented locally.** The app runs against TypeSafe's Jev model or an offline fake provider. Deployment and the custom domain are not done yet (see [Roadmap](#roadmap-and-open-decisions)). The live demo URL will be added here after deployment.
 
@@ -52,7 +52,7 @@ All configuration is environment variables (`.env` locally via `dotenv-rails`, h
 | `AI_TIMEOUT_SECONDS` | no | `10` | Per-phase (connect, write, read) timeout for the Jev request. |
 | `ANALYSES_PER_HOUR` | no | `8` | Live analyses per client IP per hour. |
 | `FAILED_LOGINS_PER_15_MINUTES` | no | `10` | Failed sign-ins per client IP per 15 minutes. |
-| `APP_HOSTS` | production | unset | Comma-separated **exact** hostnames served in production (no wildcards). Unset or invalid refuses everything except `/up`. See [docs/koyeb-deployment.md](docs/koyeb-deployment.md). |
+| `APP_HOSTS` | production | unset | Comma-separated **exact** hostnames served in production (no wildcards). Unset or invalid refuses everything except `/up`. See [docs/kamal-digitalocean-deployment.md](docs/kamal-digitalocean-deployment.md). |
 | `RAILS_MAX_THREADS` | no | `2` | Puma threads (single process, 0 forked workers). |
 | `PORT` | production | `3000` | Port Puma listens on (all IPv4 interfaces). |
 
@@ -73,6 +73,7 @@ app/services/rate_limiter.rb            in-process fixed-window counter
 app/services/app_settings.rb            ENV access and limits
 app/views/{sessions,decisions}/         server-rendered ERB
 app/assets/                             vendored Pico CSS 2.1.1, a small custom stylesheet, ~50 lines of vanilla JS
+Dockerfile, config/deploy.yml, .kamal/  container image and Kamal 2 deployment configuration
 ```
 
 Rails is loaded without Active Record, Active Job, Action Mailer, Active Storage, Action Cable, or Action Text. The only runtime gems beyond Rails are `puma` and `propshaft`; there is no Node build step.
@@ -187,21 +188,26 @@ They cover:
 - friendly, non-leaking error messages; per-IP analysis throttling; samples bypass the provider and quota;
 - CSRF enforcement, no-store caching, and log contents.
 
-Specs never use a real TypeSafe key or spend credits. Not automated: a live Jev call (done once by hand), responsive layout and keyboard use were checked by hand in a browser at mobile (375 px) and desktop widths, and the deployed memory footprint must be rechecked on Koyeb.
+Specs never use a real TypeSafe key or spend credits. Not automated: a live Jev call (done once by hand), responsive layout and keyboard use were checked by hand in a browser at mobile (375 px) and desktop widths, and the deployed memory footprint, which must be rechecked on the server. The production image was built for `linux/amd64` and run locally under Colima with fake credentials (see the deployment guide).
 
-## Performance and the 512 MB constraint
+## Performance and memory
 
-One Puma worker, two threads, no background processes, no database, no Node. Measured locally in `RAILS_ENV=production` (macOS, Ruby 4.0.7): about **56 MB RSS after boot and five analyses, about 79 MB after 200 further requests**. Linux numbers will differ somewhat, so re-measure after deployment; there is ample headroom. Rate-limit counters are capped at a 2 MB in-memory store.
+One Puma worker, two threads, no background processes, no database, no Node. Measured locally in `RAILS_ENV=production` (macOS, Ruby 4.0.7): about **56 MB RSS after boot and five analyses, about 79 MB after 200 further requests**. A native rehearsal of the Docker build steps (production gems only, Bootsnap) measured about 88 MB RSS. Linux numbers will differ somewhat, so re-measure after deployment on the 1 GB Droplet, which also runs Docker and kamal-proxy. Rate-limit counters are capped at a 2 MB in-memory store.
 
-## Deployment notes (not yet done)
+## Deployment (Kamal 2 on DigitalOcean; not yet deployed)
 
-The complete Koyeb configuration (secrets, required and optional variables, start command, health check, hostname sequence, and a first-deploy checklist) is in [docs/koyeb-deployment.md](docs/koyeb-deployment.md). Summary:
+The app deploys with [Kamal](https://kamal-deploy.org/) as one container on one DigitalOcean Droplet (Ubuntu LTS, 1 GB RAM, about $6/month), behind kamal-proxy for automatic HTTPS. The private image lives on `ghcr.io`. The complete guide (accounts, Droplet and firewall, registry token, secrets, DNS, `bin/kamal setup`, smoke tests, updates, logs, rollback, and teardown) is [docs/kamal-digitalocean-deployment.md](docs/kamal-digitalocean-deployment.md); commands that touch the outside world are marked **LIVE** there and have not been run.
 
-- Secrets: `SECRET_KEY_BASE`, `DEMO_USERNAME`, `DEMO_PASSWORD`, `TYPESAFE_API_KEY`. Plain variables: `RAILS_ENV=production`, `AI_PROVIDER=typesafe`, `TYPESAFE_MODEL=jev-latest`, `PORT`, and `APP_HOSTS` (added after Koyeb assigns its hostname).
-- Run `SECRET_KEY_BASE_DUMMY=1 bin/rails assets:precompile` at build time and start with `bin/rails server -b 0.0.0.0`. Health check: `GET /up`. No database, Redis, worker, persistent disk, or release command is needed. No Dockerfile or Procfile is committed yet.
-- Production was smoke-tested locally with the fake provider: asset build, boot, `/up`, HTTPS redirect, host authorization, login, cookie flags, graceful shutdown, and no outbound connections.
-- Open item for the first deploy: Koyeb's docs do not mention `X-Forwarded-Proto`, which the HTTPS redirect relies on. See the checklist.
+Files: `Dockerfile` (multi-stage, production gems only, Bootsnap and assets precompiled, non-root user, Puma on port 3000), `.dockerignore` (keeps `.env`, `.git`, `.kamal`, keys, and logs out of the build), `config/deploy.yml` (one `web` server, amd64, `/up` health check, forwarded headers from the trusted proxy), and `.kamal/secrets.example` (variable references only).
+
+- **Placeholders to replace at deploy time:** `REPLACE_ME_DROPLET_IP` and `REPLACE_ME_HOSTNAME` (in two places) in `config/deploy.yml`. They are deliberately invalid until edited.
+- **Secrets (names only):** `KAMAL_REGISTRY_PASSWORD`, `SECRET_KEY_BASE`, `DEMO_USERNAME`, `DEMO_PASSWORD`, `TYPESAFE_API_KEY`. They come from your shell or a password manager, never from a committed file.
+- **Non-secret production settings** (already in `config/deploy.yml`): `AI_PROVIDER=typesafe`, `TYPESAFE_MODEL=jev-latest`, `TYPESAFE_BASE_URL`, `AI_TIMEOUT_SECONDS`, `ANALYSES_PER_HOUR`, `FAILED_LOGINS_PER_15_MINUTES`, `RAILS_MAX_THREADS`, `PORT=3000`, `RAILS_LOG_LEVEL`, and `APP_HOSTS`.
+- No database, Redis, worker, volume, accessory, or release command is needed.
+- **Client IP:** the rate limiters key on `request.remote_ip`, which relies on kamal-proxy forwarding the real client address (`forward_headers: true`). The guide's live smoke test (a failed-login burst with forged `X-Forwarded-For` values) must confirm this before real use.
 - Rate-limit state is per process and lost on restart, which is acceptable for a single instance. Set a provider-side spending limit or billing alert in TypeSafe.
+
+Local checks: `bundle exec rspec`, `bin/kamal config` (parses the configuration; contacts nothing), and the local image build and run commands in the guide. Kamal builds with `docker buildx`, so the deploy machine needs the Buildx plugin (installation and configuration are in the guide).
 
 ## Roadmap and open decisions
 

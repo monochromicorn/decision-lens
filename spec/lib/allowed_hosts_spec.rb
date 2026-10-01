@@ -3,9 +3,9 @@ require "rails_helper"
 RSpec.describe AllowedHosts do
   describe ".parse" do
     it "accepts exact hostnames, trims whitespace, lower-cases, and removes duplicates" do
-      result = described_class.parse(" My-App-Org.koyeb.app , lens.example.com,LENS.example.com ")
+      result = described_class.parse(" Lens.Example.com , www.example.com,WWW.example.com ")
 
-      expect(result.hosts).to eq(%w[my-app-org.koyeb.app lens.example.com])
+      expect(result.hosts).to eq(%w[lens.example.com www.example.com])
       expect(result.rejected_count).to eq(0)
       expect(result).to be_configured
     end
@@ -77,10 +77,10 @@ RSpec.describe AllowedHosts do
       middleware.call(Rack::MockRequest.env_for("http://#{host}#{path}", "HTTP_HOST" => host)).first
     end
 
-    it "serves configured hostnames, including the Koyeb-generated and custom ones" do
-      raw = "my-app-org.koyeb.app,lens.example.com"
+    it "serves every configured hostname" do
+      raw = "lens.example.com,www.example.com"
 
-      expect(status_for(raw, host: "my-app-org.koyeb.app")).to eq(200)
+      expect(status_for(raw, host: "www.example.com")).to eq(200)
       expect(status_for(raw, host: "lens.example.com")).to eq(200)
       expect(status_for(raw, host: "LENS.example.com")).to eq(200)
     end
@@ -89,7 +89,7 @@ RSpec.describe AllowedHosts do
       expect(status_for("lens.example.com", host: "lens.example.com:8000")).to eq(200)
     end
 
-    it "also checks X-Forwarded-Host, which Koyeb sets to the requested domain" do
+    it "also checks X-Forwarded-Host, which the proxy sets to the requested domain" do
       hosts = described_class.for_rails("lens.example.com")
       middleware = ActionDispatch::HostAuthorization.new(app, hosts, exclude: described_class.health_check_exclusion)
       env = lambda do |forwarded|

@@ -32,7 +32,7 @@ threads threads_count, threads_count
 # platform-provided WEB_CONCURRENCY cannot multiply memory use.
 workers 0
 
-# Listen on all IPv4 interfaces on the platform-provided PORT (Koyeb sets it; default 3000).
+# Listen on all IPv4 interfaces on PORT (the Kamal config sets 3000, which kamal-proxy forwards to).
 bind "tcp://0.0.0.0:#{ENV.fetch("PORT", 3000)}"
 
 # Allow puma to be restarted by `bin/rails restart` command.

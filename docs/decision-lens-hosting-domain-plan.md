@@ -1,14 +1,18 @@
 # Decision Lens — Hosting, Domain, Security, and Cost Plan
 
-**Document status:** Agreed direction with implementation details  
-**Date:** September 30, 2026  
+**Document status:** Agreed direction with implementation details; hosting target revised to Kamal 2 on DigitalOcean
+
+**Date:** September 30, 2026 (hosting revised October 1, 2026)
+
 **Related document:** `decision-lens-requirements.md`
 
 ## 1. Executive decision
 
-Decision Lens will be a small Ruby on Rails portfolio application hosted on one always-running Koyeb Eco Micro instance. It will use one reusable personal-brand `.com` domain, with the app published on a subdomain such as `lens.example.com`.
+Decision Lens will be a small Ruby on Rails portfolio application deployed with **Kamal 2** to one always-running **DigitalOcean Droplet** (Ubuntu LTS, 1 GB RAM). It will use one reusable personal-brand `.com` domain, with the app published on a subdomain such as `lens.example.com`.
 
 Live AI usage will be protected by a shared demo login, per-IP rate limiting, strict input limits, and an AI-provider spending cap. The application will not contain individual user accounts or a database in its MVP.
+
+An earlier draft targeted a managed platform-as-a-service. Hosting moved to Kamal and DigitalOcean; the application's security behavior and architecture are unchanged. The step-by-step guide is `kamal-digitalocean-deployment.md`.
 
 ## 2. Selected architecture
 
@@ -21,37 +25,37 @@ Live AI usage will be protected by a shared demo login, per-IP rate limiting, st
 | Data storage | No database for the MVP |
 | AI integration | One provider adapter behind a Rails service object |
 | Access control | One shared username/password and Rails session cookie |
-| Hosting | Koyeb Eco Micro |
-| Scaling | Exactly one always-running instance |
+| Hosting | One DigitalOcean Droplet (Ubuntu LTS, 1 GB RAM, 1 vCPU, 25 GB SSD) |
+| Deployment tool | Kamal 2 (`bin/kamal`), run from the developer's machine |
+| Container registry | GitHub Container Registry (`ghcr.io`), private image |
+| Scaling | Exactly one always-running container |
 | Domain | Reusable personal-brand `.com` |
 | Public URL | `lens.<chosen-domain>.com` |
-| DNS registrar/provider | Cloudflare Registrar preferred |
-| HTTPS | Automatic Koyeb TLS certificate |
+| DNS registrar/provider | Cloudflare Registrar preferred (DNS-only records) |
+| HTTPS | Automatic Let's Encrypt certificate from kamal-proxy |
 
 ## 3. Hosting configuration
 
-### Koyeb service
+### DigitalOcean Droplet
 
-- Instance type: **Eco Micro**.
-- Region: Washington, D.C. is the likely choice for a primarily US hiring audience.
-- Resources: 0.25 vCPU, 512 MB RAM, and 4 GB SSD.
-- Scaling: fixed at one instance, or autoscaling minimum one and maximum one.
-- Expected compute cost: approximately **$2.68 for a complete month** at the pricing checked on September 30, 2026.
-- Account plan: Koyeb Starter, with no base subscription fee and a valid payment method.
-- Health check: HTTP request to `/up`.
-- Deploy source: public Git repository, automatically deployed from the main branch after tests pass.
+- Plan: Basic, Regular (shared CPU), 1 GB RAM, 1 vCPU, 25 GB SSD, approximately **$6 per month**. Recheck pricing before creating it.
+- Image: the newest Ubuntu LTS DigitalOcean offers. Region: nearest the audience (New York for a primarily US hiring audience).
+- Access: SSH keys only. Cloud Firewall allowing TCP 22 (ideally from your own IP), 80, and 443.
+- A 1 GB swap file as a safety margin; no paid Backups (the server holds no state).
+- A powered-off Droplet still bills; destroying it is the only way to stop charges.
 
-The paid Eco Micro should not be configured to scale to zero. Keeping one instance allocated avoids the cold-start delay that could cause a prospective employer to leave before seeing the demo.
+### Kamal 2 and kamal-proxy
+
+- One `web` role, one server, no accessories, no volumes, no database, no workers.
+- kamal-proxy listens on ports 80 and 443, obtains and renews a Let's Encrypt certificate for the configured hostname, redirects HTTP to HTTPS, health-checks `GET /up`, and swaps containers with no downtime. The app container (Puma on port 3000) is never published to the host.
+- The Docker image is built on the developer's machine for amd64, pushed to a private `ghcr.io` image, and pulled by the server using a narrowly scoped GitHub token.
+- Deployment is a manual `bin/kamal deploy` from the developer's machine. Automatic deployment from CI is a possible later addition.
 
 ### Rails runtime limits
 
-- One Puma worker.
-- Small thread pool, initially two or three threads.
-- No background worker process.
-- No database process.
-- No Node-based asset build.
-- Memory usage should be measured after deployment and remain comfortably below 512 MB.
-- If the application cannot operate reliably within 512 MB, move to Koyeb Eco Small at approximately $5.36 per month rather than weakening reliability.
+- One Puma process (no forked workers) with two threads.
+- No background worker process, no database process, no Node-based asset build.
+- Memory: the application measures roughly 60 to 90 MB resident locally. The Droplet shares its 1 GB with Docker and kamal-proxy; measure after deployment and keep the app comfortably small. If the server proves too tight, move to the next Droplet size rather than weakening reliability.
 
 ## 4. Domain strategy
 
@@ -95,28 +99,31 @@ One registered domain can support any number of project subdomains without addit
 
 Avoid selecting a promotional extension solely because its first year costs less than a dollar. Renewal prices for promotional extensions can be much higher than `.com` pricing.
 
-### DNS connection to Koyeb
+### DNS connection to the Droplet
 
-The recommended public hostname is a subdomain because it maps cleanly to Koyeb:
+The recommended public hostname is a subdomain pointing at the Droplet's IPv4 address:
 
 ```text
-Type:   CNAME
+Type:   A
 Name:   lens
-Target: <value supplied by Koyeb>.cname.koyeb.app
+Target: <Droplet public IPv4 address>
+TTL:    300
 ```
+
+If the DNS provider can proxy traffic (Cloudflare), keep the record **DNS only** so Let's Encrypt can reach kamal-proxy directly.
 
 Implementation sequence:
 
 1. Register the domain.
-2. Add `lens.<chosen-domain>.com` to the Koyeb application.
-3. Copy Koyeb's assigned CNAME target.
-4. Create the `lens` CNAME record in the DNS provider.
-5. Ask Koyeb to validate the domain.
-6. Confirm that the TLS certificate becomes active.
-7. Configure Rails to force HTTPS in production.
+2. Create the Droplet and note its IP address.
+3. Create the `lens` A record and confirm it resolves to the Droplet.
+4. Put the hostname in `config/deploy.yml` (`proxy.host` and `APP_HOSTS`).
+5. Run `bin/kamal setup`; kamal-proxy obtains the certificate once DNS resolves.
+6. Confirm HTTPS works and HTTP redirects to it.
+7. Rails forces HTTPS in production and trusts the proxy's forwarded protocol and client address.
 8. Verify sign-in, sign-out, form submission, and health checks through the custom hostname.
 
-Koyeb automatically provisions TLS for validated custom domains. The exact records shown by Koyeb at deployment time take precedence over examples in this document.
+The exact commands and smoke tests are in `kamal-digitalocean-deployment.md`.
 
 ## 5. Shared demo access
 
@@ -124,7 +131,7 @@ The app will use a custom Rails login screen with one shared credential pair. Th
 
 ### Included
 
-- Shared username and password stored as Koyeb Secrets.
+- Shared username and password supplied to the container as Kamal secrets.
 - Rails signed and encrypted session cookie.
 - Session reset after successful sign-in.
 - Secure, HTTP-only, same-site cookie settings in production.
@@ -166,19 +173,21 @@ If the monthly AI allowance is exhausted, show a graceful message and keep the p
 
 ## 7. Secrets and configuration
 
-Expected production secrets:
+Production secrets, supplied to Kamal from the deployer's environment (never from a committed file):
 
 | Secret | Purpose |
 |---|---|
-| `RAILS_MASTER_KEY` | Decrypt Rails credentials if used |
-| `SECRET_KEY_BASE` | Sign/encrypt Rails sessions when required by deployment setup |
+| `KAMAL_REGISTRY_PASSWORD` | GitHub token used to push and pull the private image |
+| `SECRET_KEY_BASE` | Sign and encrypt Rails session cookies |
 | `DEMO_USERNAME` | Shared portfolio-demo username |
-| `DEMO_PASSWORD` or password digest | Shared portfolio-demo credential |
-| Provider-specific API key | Authenticate the AI request |
+| `DEMO_PASSWORD` | Shared portfolio-demo credential |
+| `TYPESAFE_API_KEY` | Authenticate the AI request |
 
-Additional non-secret configuration may include the model name, provider endpoint, request timeout, rate limit, and maximum input length.
+`RAILS_MASTER_KEY` is not used (the app has no credentials file).
 
-Secrets must exist only in local untracked environment configuration and Koyeb Secrets. The repository should contain a `.env.example` with placeholder names but no real values.
+Non-secret configuration (the model name, provider endpoint, request timeout, rate limits, thread count, and the allowed hostname) lives in `config/deploy.yml`.
+
+Secrets must exist only in the deployer's local untracked environment (or `.kamal/secrets`, which is git-ignored) and, at runtime, in the container environment. The repository contains `.env.example` and `.kamal/secrets.example` with placeholder names but no real values.
 
 ## 8. Cost estimate
 
@@ -186,39 +195,42 @@ Secrets must exist only in local untracked environment configuration and Koyeb S
 
 | Item | Monthly equivalent | Annual estimate |
 |---|---:|---:|
-| Koyeb Eco Micro | $2.68 | $32.16 |
+| DigitalOcean Droplet (1 GB) | $6.00 | $72.00 |
 | `.com` registration | ~$0.83–$1.00 | ~$10–$12 |
 | DNS hosting | $0 | $0 |
 | WHOIS privacy | $0 | $0 |
-| TLS certificate | $0 | $0 |
+| TLS certificate (Let's Encrypt) | $0 | $0 |
+| Container registry (private image) | $0 | $0 |
 | Database | $0 | $0 |
-| **Fixed subtotal** | **~$3.51–$3.68** | **~$42–$44** |
+| **Fixed subtotal** | **~$6.83–$7.00** | **~$82–$84** |
 
 ### Variable cost
 
 Target AI usage: **$0–$3 per month**, protected by the controls in this document.
 
-Expected combined budget: approximately **$3.50–$6.70 per month**, or **$42–$80 per year**, depending on live AI usage and excluding taxes.
+Expected combined budget: approximately **$6.83–$10 per month**, or **$82–$120 per year**, depending on live AI usage and excluding taxes.
 
-All prices are planning estimates, not contractual quotes. Recheck the registrar, Koyeb, and AI-provider prices immediately before purchase or deployment.
+All prices are planning estimates, not contractual quotes. Recheck DigitalOcean, the registrar, and AI-provider prices immediately before purchase or deployment.
 
 ## 9. Deployment checklist
+
+Steps marked live create or change something outside the repository; see `kamal-digitalocean-deployment.md`.
 
 - [ ] Select and register the reusable domain.
 - [ ] Enable registrar account two-factor authentication.
 - [ ] Enable registrar lock, auto-renewal, WHOIS privacy, and DNSSEC.
-- [ ] Create the Koyeb organization on the Starter plan.
-- [ ] Add a payment method and a billing alert.
-- [ ] Deploy the app to one Eco Micro instance.
-- [ ] Confirm the scaling minimum and maximum both equal one.
-- [ ] Add all production secrets.
-- [ ] Configure `/up` as the HTTP health check.
-- [ ] Attach `lens.<chosen-domain>.com` in Koyeb.
-- [ ] Add the CNAME record at the DNS provider.
-- [ ] Validate automatic TLS.
-- [ ] Verify production HTTPS and secure cookies.
+- [ ] Create a DigitalOcean account, add a payment method, and set a billing alert.
+- [ ] Create an SSH key pair for server access.
+- [ ] Create the 1 GB Ubuntu LTS Droplet with SSH-key authentication.
+- [ ] Attach a Cloud Firewall allowing only TCP 22, 80, and 443; add a swap file.
+- [ ] Create a GitHub classic token with only `write:packages`, and export the five Kamal secrets locally.
+- [ ] Create the `A` record for `lens.<chosen-domain>.com` (DNS only) and confirm it resolves.
+- [ ] Replace the two placeholders in `config/deploy.yml` (server IP and hostname).
+- [ ] Run `bin/kamal setup`.
+- [ ] Confirm the private `ghcr.io` package, the health check on `/up`, and automatic TLS.
+- [ ] Verify production HTTPS, secure cookies, host authorization, and the client-IP / rate-limit test.
 - [ ] Confirm unauthenticated users cannot invoke the AI service.
-- [ ] Test the rate limit and provider-failure experience.
+- [ ] Test the provider-failure experience.
 - [ ] Set the AI-provider spending cap or billing alert.
 - [ ] Add the live URL and shared credential instructions to the résumé/portfolio presentation.
 - [ ] Recheck memory usage and the first-load experience from a private browser session.
@@ -227,14 +239,16 @@ All prices are planning estimates, not contractual quotes. Recheck the registrar
 
 1. The exact personal-brand domain name.
 2. Cloudflare Registrar or Spaceship after checking availability and final renewal cost.
-3. The initial AI provider and monthly provider cap.
+3. The monthly TypeSafe spending cap, and the concrete Jev model version once the API reports one that it accepts.
 4. Whether to publish the shared credentials openly or provide them only with job applications.
+5. The Droplet region and which SSH key and registry token to use.
 
 ## 11. Reference links
 
-- [Koyeb instance types and pricing](https://www.koyeb.com/docs/reference/instances)
-- [Koyeb scaling](https://www.koyeb.com/docs/reference/scaling)
-- [Koyeb custom-domain setup](https://www.koyeb.com/docs/run-and-scale/domains)
+- [Kamal](https://kamal-deploy.org/)
+- [kamal-proxy](https://github.com/basecamp/kamal-proxy)
+- [DigitalOcean Droplet pricing](https://www.digitalocean.com/pricing/droplets)
+- [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 - [Cloudflare Registrar](https://www.cloudflare.com/domains/)
 - [Spaceship domain pricing](https://www.spaceship.com/domains/)
 

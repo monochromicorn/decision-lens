@@ -7,9 +7,10 @@ RSpec.describe "Client IP handling", type: :request do
     post login_path, params: { username: "nope", password: "nope" }, headers: headers
   end
 
-  # Koyeb appends the connecting IP to the END of X-Forwarded-For and documents that last
-  # entry as the only one it certifies. Rails takes the rightmost entry that is not a trusted
-  # proxy, so anything a client forges to its left never matters.
+  # A TLS-terminating proxy appends the connecting IP to the END of X-Forwarded-For. Rails
+  # takes the rightmost entry that is not a trusted proxy, so anything a client forges to its
+  # left never matters. This holds only if the proxy really appends: the deployment guide's
+  # live smoke test verifies that for kamal-proxy with forward_headers enabled.
   it "keys on the rightmost X-Forwarded-For entry, never on forged entries to its left" do
     3.times { |i| failed_login("REMOTE_ADDR" => "198.51.100.20", "X-Forwarded-For" => "203.0.113.#{i}, 198.51.100.7") }
 

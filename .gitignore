@@ -5,6 +5,10 @@
 /config/master.key
 /config/*.key
 
+# Kamal secrets: only the example (variable references, no values) is tracked
+/.kamal/secrets*
+!/.kamal/secrets.example
+
 # Logs, temp files, and build output
 /log/*
 !/log/.keep
