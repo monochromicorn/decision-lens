@@ -1,6 +1,7 @@
 require "rails_helper"
 require "yaml"
 require "open3"
+require "ipaddr"
 
 # Guards the invariants of the Kamal 2 / Docker deployment without snapshotting whole files.
 RSpec.describe "Deployment configuration" do
@@ -40,15 +41,27 @@ RSpec.describe "Deployment configuration" do
       expect(proxy["host"]).to be_present
     end
 
-    it "keeps the proxy host and APP_HOSTS identical, and never ships an editable-by-accident real value" do
-      expect(deploy["env"]["clear"]["APP_HOSTS"]).to eq(deploy["proxy"]["host"])
+    it "targets one valid public IPv4 server address" do
+      address = deploy["servers"]["web"].first
+      ip = IPAddr.new(address)
+
+      expect(address).to match(/\A\d{1,3}(\.\d{1,3}){3}\z/)
+      expect(ip).to be_ipv4
+      expect([ ip.private?, ip.loopback?, ip.link_local? ]).to all(be false)
+      expect(IPAddr.new("0.0.0.0/8").include?(ip)).to be false
+      expect(IPAddr.new("100.64.0.0/10").include?(ip)).to be false
+      expect(IPAddr.new("192.0.2.0/24").include?(ip)).to be false
+      expect(IPAddr.new("224.0.0.0/3").include?(ip)).to be false
     end
 
-    it "uses placeholders that can never pass host validation or look like a server address" do
-      placeholders = [ deploy["proxy"]["host"], *deploy["servers"]["web"] ].grep(/REPLACE_ME/)
+    it "serves the production hostname, and APP_HOSTS matches proxy.host exactly" do
+      expect(deploy["proxy"]["host"]).to eq("lens.juanmoredemo.com")
+      expect(deploy["env"]["clear"]["APP_HOSTS"]).to eq(deploy["proxy"]["host"])
+      expect(AllowedHosts.parse(deploy["env"]["clear"]["APP_HOSTS"]).hosts).to eq([ "lens.juanmoredemo.com" ])
+    end
 
-      expect(placeholders.length).to eq(2)
-      expect(AllowedHosts.parse(deploy["proxy"]["host"]).hosts).to be_empty if deploy["proxy"]["host"].match?(/REPLACE_ME/)
+    it "contains no REPLACE_ME placeholder" do
+      expect(root.join("config/deploy.yml").read).not_to include("REPLACE_ME")
     end
 
     it "sets the documented non-secret production values" do

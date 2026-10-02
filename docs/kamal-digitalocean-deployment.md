@@ -1,6 +1,6 @@
 # Decision Lens: Kamal 2 on DigitalOcean
 
-**Status:** preparation is finished and verified locally, including a local build and run of the production image. **Nothing has been deployed.** No Droplet, domain, DNS record, registry login, or token exists yet.
+**Status:** preparation is finished and verified locally, including a local build and run of the production image. The Droplet, the DNS-only A record, SSH access, and the Cloud Firewall exist (created outside this repository) and `config/deploy.yml` targets them. **The application has not been deployed.** The registry token and the five secrets are still to be prepared, and no registry login or image push has happened.
 **Related:** `decision-lens-hosting-domain-plan.md`, `README.md`, `config/deploy.yml`, `Dockerfile`.
 
 ## How to read this guide
@@ -27,19 +27,21 @@ browser ──HTTPS──▶ kamal-proxy (ports 80/443, Let's Encrypt) ──HTT
 |---|---|
 | DigitalOcean account | With a payment method. The intended Droplet is **Basic, Regular (shared CPU), 1 GB RAM / 1 vCPU / 25 GB SSD, about $6/month**. Recheck current pricing. |
 | GitHub account | Owns the private image. `config/deploy.yml` uses the account name already in the repository's remote. |
-| A domain you control | The app is served at a subdomain such as `lens.yourdomain.example`. No domain is purchased yet. |
+| A domain you control | The production hostname is `lens.juanmoredemo.com`. |
 | SSH key pair | For key-only server access (`ssh-keygen -t ed25519 -C "decision-lens"`). |
 | Docker and Buildx on your machine | Kamal builds the image locally with `docker buildx`, so the **Buildx plugin is required**. On macOS: `brew install colima docker docker-buildx`, then configure the plugin as described under "Install Docker and Buildx" below. Colima is a lightweight alternative to Docker Desktop. |
 | Ruby and Bundler | Already used by this repository. `bin/kamal` is Kamal 2.12 from the Gemfile (development group only; it is not in the production image). |
 
-## Values to replace (LIVE phase)
+## Production target values
 
-`config/deploy.yml` contains these on purpose-invalid placeholders (underscores are not valid in hostnames, so the file cannot serve traffic until edited):
+`config/deploy.yml` is already set for the production target. These are public information, not secrets:
 
-| Placeholder | Where | Replace with |
+| Setting | Where | Value |
 |---|---|---|
-| `REPLACE_ME_DROPLET_IP` | `servers.web` | The Droplet's public IPv4 address. |
-| `REPLACE_ME_HOSTNAME` | `proxy.host` **and** `env.clear.APP_HOSTS` | The final hostname, for example `lens.yourdomain.example`. Both must match exactly. |
+| Droplet IPv4 address | `servers.web` | `164.90.142.242` |
+| Production hostname | `proxy.host` **and** `env.clear.APP_HOSTS` | `lens.juanmoredemo.com` (both must match exactly) |
+
+If the Droplet or hostname ever changes, update these three lines together (a spec checks that they stay consistent) and re-verify DNS.
 
 Also confirm `image` and `registry.username` (`monochromicorn`) are the GitHub account that owns the token. The server IP and hostname are not secrets, but they become public if you commit them to a public repository; that is acceptable here.
 
@@ -111,7 +113,7 @@ Set in `config/deploy.yml` (`env.clear`), already filled in:
 | `RAILS_MAX_THREADS` | `2` |
 | `PORT` | `3000` |
 | `RAILS_LOG_LEVEL` | `info` |
-| `APP_HOSTS` | the final hostname (placeholder until the live phase) |
+| `APP_HOSTS` | `lens.juanmoredemo.com` (must equal `proxy.host`) |
 
 `RAILS_ENV=production` is set in the `Dockerfile`. `WEB_CONCURRENCY` is ignored: `config/puma.rb` pins a single process. In production the app refuses to boot with `AI_PROVIDER=typesafe` if `TYPESAFE_API_KEY` or `TYPESAFE_MODEL` is missing, and serves only exact hostnames listed in `APP_HOSTS` (an unset or invalid value refuses everything except `/up`).
 
@@ -212,7 +214,7 @@ Automatic HTTPS fails (and retries) if the name does not yet resolve to the serv
 
 ## First deployment **[LIVE]**
 
-1. Replace the two placeholders in `config/deploy.yml` (see above) and commit that change.
+1. Confirm `config/deploy.yml` shows the production IP and hostname (see above).
 2. Export the five secrets in your terminal and run the check above.
 3. Run:
 
@@ -224,7 +226,7 @@ Automatic HTTPS fails (and retries) if the name does not yet resolve to the serv
 
 ## Smoke tests after the first deploy **[LIVE]**
 
-Replace `HOST` and `DROPLET_IP`.
+Replace `HOST` and `DROPLET_IP` (production: `lens.juanmoredemo.com` and `164.90.142.242`).
 
 | # | Check | Expected |
 |---|---|---|

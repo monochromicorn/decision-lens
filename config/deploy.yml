@@ -1,9 +1,8 @@
 # Kamal 2 deployment for Decision Lens: one web server, no database or accessories.
 # Guide: docs/kamal-digitalocean-deployment.md
 #
-# Values that are NOT known yet are written as REPLACE_ME_*. They are deliberately invalid
-# (underscores are not allowed in hostnames), so an unedited file can never serve traffic.
-# Replace them in the live-deployment phase.
+# Production target: the Droplet's public IPv4 address and the hostname whose DNS-only A
+# record points at it. Both are public information, not secrets.
 service: decision-lens
 
 # Private image on GitHub Container Registry: ghcr.io/<github-user>/decision-lens
@@ -11,13 +10,13 @@ image: monochromicorn/decision-lens
 
 servers:
   web:
-    - REPLACE_ME_DROPLET_IP
+    - 164.90.142.242
 
 proxy:
   # kamal-proxy terminates TLS with an automatic Let's Encrypt certificate. This needs
   # the hostname's DNS to point at the server and ports 80 and 443 to be open.
   ssl: true
-  host: REPLACE_ME_HOSTNAME
+  host: lens.juanmoredemo.com
   app_port: 3000
   # Rails relies on X-Forwarded-Proto (HTTPS detection) and X-Forwarded-For (client IP for
   # rate limits) from this trusted proxy. See the deployment guide's smoke tests.
@@ -48,7 +47,7 @@ env:
     PORT: 3000
     RAILS_LOG_LEVEL: info
     # Exact hostname(s), comma-separated; must match proxy.host above.
-    APP_HOSTS: REPLACE_ME_HOSTNAME
+    APP_HOSTS: lens.juanmoredemo.com
   secret:
     - SECRET_KEY_BASE
     - DEMO_USERNAME

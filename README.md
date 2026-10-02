@@ -200,7 +200,7 @@ The app deploys with [Kamal](https://kamal-deploy.org/) as one container on one 
 
 Files: `Dockerfile` (multi-stage, production gems only, Bootsnap and assets precompiled, non-root user, Puma on port 3000), `.dockerignore` (keeps `.env`, `.git`, `.kamal`, keys, and logs out of the build), `config/deploy.yml` (one `web` server, amd64, `/up` health check, forwarded headers from the trusted proxy), and `.kamal/secrets.example` (variable references only).
 
-- **Placeholders to replace at deploy time:** `REPLACE_ME_DROPLET_IP` and `REPLACE_ME_HOSTNAME` (in two places) in `config/deploy.yml`. They are deliberately invalid until edited.
+- **Production target (public, already set in `config/deploy.yml`):** Droplet `164.90.142.242` and hostname `lens.juanmoredemo.com` (used for both `proxy.host` and `APP_HOSTS`).
 - **Secrets (names only):** `KAMAL_REGISTRY_PASSWORD`, `SECRET_KEY_BASE`, `DEMO_USERNAME`, `DEMO_PASSWORD`, `TYPESAFE_API_KEY`. They come from your shell or a password manager, never from a committed file.
 - **Non-secret production settings** (already in `config/deploy.yml`): `AI_PROVIDER=typesafe`, `TYPESAFE_MODEL=jev-latest`, `TYPESAFE_BASE_URL`, `AI_TIMEOUT_SECONDS`, `ANALYSES_PER_HOUR`, `FAILED_LOGINS_PER_15_MINUTES`, `RAILS_MAX_THREADS`, `PORT=3000`, `RAILS_LOG_LEVEL`, and `APP_HOSTS`.
 - No database, Redis, worker, volume, accessory, or release command is needed.

@@ -225,7 +225,7 @@ Steps marked live create or change something outside the repository; see `kamal-
 - [ ] Attach a Cloud Firewall allowing only TCP 22, 80, and 443; add a swap file.
 - [ ] Create a GitHub classic token with only `write:packages`, and export the five Kamal secrets locally.
 - [ ] Create the `A` record for `lens.<chosen-domain>.com` (DNS only) and confirm it resolves.
-- [ ] Replace the two placeholders in `config/deploy.yml` (server IP and hostname).
+- [x] Set the server IP and hostname in `config/deploy.yml` (`164.90.142.242`, `lens.juanmoredemo.com`).
 - [ ] Run `bin/kamal setup`.
 - [ ] Confirm the private `ghcr.io` package, the health check on `/up`, and automatic TLS.
 - [ ] Verify production HTTPS, secure cookies, host authorization, and the client-IP / rate-limit test.
