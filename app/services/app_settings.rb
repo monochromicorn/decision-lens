@@ -36,6 +36,6 @@ module AppSettings
 
     raise DecisionAnalyzer::ConfigurationError, "AI_PROVIDER=typesafe requires #{missing.join(', ')}"
   end
-  def analyses_per_hour = ENV.fetch("ANALYSES_PER_HOUR", 8).to_i
+  def analyses_per_hour = ENV.fetch("ANALYSES_PER_HOUR", 100).to_i
   def failed_logins_per_15_minutes = ENV.fetch("FAILED_LOGINS_PER_15_MINUTES", 10).to_i
 end

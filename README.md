@@ -50,7 +50,7 @@ All configuration is environment variables (`.env` locally via `dotenv-rails`, h
 | `TYPESAFE_MODEL` | when `typesafe` | none (`jev-latest` in `.env.example`) | Model name from `GET /v1/models`. See [model choice](#model-choice-alias-vs-pinned-version). |
 | `TYPESAFE_BASE_URL` | no | `https://api.typesafe.ai` | Must be `https` (plain `http` is allowed only for loopback, for tests). |
 | `AI_TIMEOUT_SECONDS` | no | `10` | Per-phase (connect, write, read) timeout for the Jev request. |
-| `ANALYSES_PER_HOUR` | no | `8` | Live analyses per client IP per hour. |
+| `ANALYSES_PER_HOUR` | no | `100` | Live analyses per client IP per hour (fixed one-hour window kept in process memory). Built-in samples and invalid input do not count. |
 | `FAILED_LOGINS_PER_15_MINUTES` | no | `10` | Failed sign-ins per client IP per 15 minutes. |
 | `APP_HOSTS` | production | unset | Comma-separated **exact** hostnames served in production (no wildcards). Unset or invalid refuses everything except `/up`. See [docs/kamal-digitalocean-deployment.md](docs/kamal-digitalocean-deployment.md). |
 | `RAILS_MAX_THREADS` | no | `2` | Puma threads (single process, 0 forked workers). |

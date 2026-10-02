@@ -161,7 +161,7 @@ Use all of the following protections:
 - Maximum input length of 2,000 characters.
 - Exactly one AI request for each accepted analysis.
 - No conversation history, agent loop, retrieval, or tool calls.
-- Per-IP allowance of approximately 5–10 analyses per hour.
+- Per-IP allowance of 100 live analyses per client IP per hour (a fixed one-hour window kept in process memory; built-in samples and invalid input do not count).
 - Modest limit on failed sign-in attempts.
 - Provider request timeout.
 - Provider-side monthly spending limit or the strongest available billing alert.

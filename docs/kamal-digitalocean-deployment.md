@@ -108,7 +108,7 @@ Set in `config/deploy.yml` (`env.clear`), already filled in:
 | `TYPESAFE_MODEL` | `jev-latest` |
 | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` |
 | `AI_TIMEOUT_SECONDS` | `10` |
-| `ANALYSES_PER_HOUR` | `8` |
+| `ANALYSES_PER_HOUR` | `100` |
 | `FAILED_LOGINS_PER_15_MINUTES` | `10` |
 | `RAILS_MAX_THREADS` | `2` |
 | `PORT` | `3000` |
@@ -260,7 +260,7 @@ done
 rm -f "$JAR"
 ```
 
-Expected: attempts 1–10 return `401`, then `429`. If every attempt returns `401`, the forged header is being trusted: **stop**, set `forward_headers: false` for a test deploy, and re-run (check 4 will show whether HTTPS detection still works). The analysis limit (`ANALYSES_PER_HOUR=8`) uses the same client address; to test it cheaply, set `ANALYSES_PER_HOUR: 2` temporarily and run `bin/kamal deploy`, then restore 8.
+Expected: attempts 1–10 return `401`, then `429`. If every attempt returns `401`, the forged header is being trusted: **stop**, set `forward_headers: false` for a test deploy, and re-run (check 4 will show whether HTTPS detection still works). The analysis limit (`ANALYSES_PER_HOUR=100`) uses the same client address; to test it cheaply, set `ANALYSES_PER_HOUR: 2` temporarily and run `bin/kamal deploy`, then restore 100.
 
 ### TypeSafe and cost controls **[LIVE]**
 

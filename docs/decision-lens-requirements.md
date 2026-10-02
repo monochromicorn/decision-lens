@@ -179,7 +179,7 @@ GET    /up        Rails health check (no authentication)
 - Do not persist inputs or results.
 - State near the form that submitted text is sent to an external AI provider and should not contain sensitive information.
 - Limit input to 2,000 characters before making an external request.
-- Apply a modest per-IP rate limit even after authentication, initially targeting 5–10 live analyses per hour.
+- Apply a per-IP rate limit even after authentication: 100 live analyses per client IP per hour, as a fixed one-hour window kept in process memory (a restart clears it). Built-in samples, invalid input, and unauthenticated requests do not count. The AI-provider spending limit remains the financial backstop.
 - Configure a hard monthly spending limit or alert with the AI provider when available.
 - Cache or precompute the three built-in sample results where practical so repeated portfolio demonstrations do not require paid inference.
 - Add abuse protection only if traffic warrants it; avoid collecting unnecessary personal information.

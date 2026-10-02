@@ -29,4 +29,24 @@ RSpec.describe AppSettings do
       end
     end
   end
+
+  describe "rate-limit defaults" do
+    it "allows 100 live analyses per client IP per hour when unset" do
+      with_env("ANALYSES_PER_HOUR" => nil) do
+        expect(described_class.analyses_per_hour).to eq(100)
+      end
+    end
+
+    it "honors an explicit ANALYSES_PER_HOUR" do
+      with_env("ANALYSES_PER_HOUR" => "2") do
+        expect(described_class.analyses_per_hour).to eq(2)
+      end
+    end
+
+    it "keeps the failed-login default at 10 per 15 minutes" do
+      with_env("FAILED_LOGINS_PER_15_MINUTES" => nil) do
+        expect(described_class.failed_logins_per_15_minutes).to eq(10)
+      end
+    end
+  end
 end

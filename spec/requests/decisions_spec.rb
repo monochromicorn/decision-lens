@@ -265,6 +265,30 @@ RSpec.describe "Decisions", type: :request do
         expect(response).to have_http_status(:ok)
       end
 
+      it "allows exactly 100 live analyses per client per hour by default, then refuses the 101st without calling the provider" do
+        provider = provider_double(billing_json)
+        use_provider(provider)
+
+        with_env("ANALYSES_PER_HOUR" => nil) do
+          100.times do
+            post analyze_path, params: { decision: { text: valid_text } }
+            expect(response).to have_http_status(:ok)
+          end
+          expect(provider).to have_received(:complete).exactly(100).times
+
+          post analyze_path, params: { decision: { text: valid_text } }
+          expect(response).to have_http_status(:too_many_requests)
+          assert_select ".notice-alert", /hourly limit/
+          expect(provider).to have_received(:complete).exactly(100).times
+
+          # Built-in samples stay exempt, and another client still has its own allowance.
+          post analyze_path, params: { decision: { text: SampleInputs::ALL.first.text } }
+          expect(response).to have_http_status(:ok)
+          post analyze_path, params: { decision: { text: valid_text } }, headers: { "REMOTE_ADDR" => "203.0.113.50" }
+          expect(response).to have_http_status(:ok)
+        end
+      end
+
       it "counts failed provider calls against the quota" do
         provider = provider_double
         allow(provider).to receive(:complete).and_raise(DecisionAnalyzer::ProviderError)
