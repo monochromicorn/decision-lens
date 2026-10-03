@@ -52,9 +52,17 @@ FROM base
 COPY --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --from=build /rails /rails
 
-# Run as an unprivileged user that can write only log/ and tmp/.
+# Run as an unprivileged user. Application code stays owned by root and is read-only for
+# that user; only log/ and tmp/ are writable by it.
+#
+# `chmod -R a+rX` guarantees every file under /rails is readable, and every directory
+# searchable, by the unprivileged user. It protects builds whose context was created under
+# a restrictive umask (for example a clone or worktree made with umask 077), where COPY
+# would otherwise carry source files in as mode 600, unreadable by UID 1000. It adds no
+# write permission and changes nothing when modes are already fine.
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin && \
+    chmod -R a+rX /rails && \
     chown -R rails:rails log tmp
 USER 1000:1000
 

@@ -151,6 +151,37 @@ RSpec.describe "Deployment configuration" do
       expect(dockerfile.index("USER 1000:1000")).to be < dockerfile.index("CMD [")
     end
 
+    describe "runtime file permissions" do
+      # Final-stage instructions only: comments removed, backslash-continued lines joined.
+      let(:final_stage) do
+        dockerfile.split(/^FROM /i).last.lines.reject { |line| line.strip.start_with?("#") }.join.gsub(/\\\n/, " ")
+      end
+
+      it "makes /rails readable and searchable for everyone before switching to the unprivileged user" do
+        chmod_at = final_stage.index("chmod -R a+rX /rails")
+
+        expect(chmod_at).not_to be_nil
+        expect(chmod_at).to be > final_stage.index("COPY --from=build /rails /rails")
+        expect(chmod_at).to be < final_stage.index("USER 1000:1000")
+      end
+
+      it "only adds read/search permission, never write or broader modes" do
+        chmods = final_stage.scan(/chmod\s+[^&|;\n]+/).map(&:strip)
+
+        expect(chmods).to eq([ "chmod -R a+rX /rails" ])
+      end
+
+      it "does not recursively chown the application source to the runtime user" do
+        expect(final_stage).not_to match(%r{chown\s+-R[^&|;\n]*(/rails|\s\.(\s|$)|\s\*)})
+      end
+
+      it "keeps log/ and tmp/ as the only runtime-owned (writable) directories" do
+        chowns = final_stage.scan(/chown\s+[^&|;\n]+/).map(&:strip)
+
+        expect(chowns).to eq([ "chown -R rails:rails log tmp" ])
+      end
+    end
+
     it "has no database, cache, queue, or release-step commands" do
       expect(dockerfile).not_to match(/db:|sqlite|postgres|libpq|mysql|redis|sidekiq|memcached|solid_queue|thrust|entrypoint/i)
     end
